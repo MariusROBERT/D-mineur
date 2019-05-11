@@ -32,7 +32,8 @@ class boutons:
 
     def creation(self):
         Button(Fenetre, text = "     ", command = lambda:check(self.ligne, self.colonne)).grid(row = self.ligne, column = self.colonne)
-
+        #if texte[ligne+cote*colonne] == "1":
+        #    bombe = True
 
 
 
@@ -59,7 +60,7 @@ def generation():
 
 def check(ligne, colonne):
     global mineautour, texte, casestestees
-    texte2 = texte
+    #texte2 = texte
     """
     for l in range(cote):
         texte2 = texte2[:cote*l] + "00" + texte2[cote*l+1:]
@@ -69,20 +70,16 @@ def check(ligne, colonne):
         print("perdu")
         showerror("Perdu", "Vous êtes tombé sur une mine, vous aurez peut-être plus de chance la prochaine fois")
         Button(Fenetre, text = "  X  ").grid(row = ligne, column = colonne)
+
     else:
-        for k in range(2): #Pour les 8 cases autour
-            ligne -= 1 #Pour commencer à la case à gauche et faire les 2 à droite
-            colonne -= 1 #Pour commencer à la case au dessus et faire les 2 en dessous
-            if ligne+k >= 0 and ligne+k+cote*colonne < len(texte) and texte[ligne+k+cote*colonne] == "1": #Test mine sur la même ligne   Test que si emplacement testé existe
-                mineautour += 1
-            elif colonne+k >= 0 and ligne+cote*(colonne+k) < len(texte) and texte[ligne+cote*(colonne+k)] == "1": #Test mines sur la même colonne   Test que si emplacement testé existe
-                mineautour += 1
-            ligne += 1
-            colonne += 1
-        casestestees += 1
+        for i in range(-1,2):
+            for j in range(-1,2):
+                if ligne+i+cote*(colonne+j) <= 0 or ligne+i+cote*(colonne+j) > len(texte):
+                    pass
+                elif texte[ligne+i+cote*(colonne+j)] == "1":
+                    mineautour +=1
 
         Button(Fenetre, text = "  "+ str(mineautour) +"  ").grid(row = ligne, column = colonne)
-
         mineautour = 0 #Reset du nombre de mines pour les autres boutons
         if casestestees + mines == cote^2:
             showinfo("Gagné !", "Vous avez trouvé toutes les mines")
