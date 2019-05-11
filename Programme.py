@@ -41,26 +41,23 @@ class boutons:
 def generation():
     global texte, mines
     #mapd = open(fichiermap, "w")
-    for i in range(cote):
+    """for i in range(cote):
         for j in range(cote):
             texte += "0"
+    """
         #texte += "\n"
+    texte = str(cote*cote * "0")
 
 
 
-    while mines < minesmax:
-        caractere = randint(0, cote*cote)
-        if texte[caractere-1] == "0":
+    while mines < minesmax: #Tant qu'il n'y a pas assez de mines
+        caractere = randint(0, cote*cote) #Emplacement aléatoire
+        if texte[caractere-1] == "0": #Met une mine si y'en a pas déjà une
             texte = texte[:caractere] + "1" + texte[caractere+1:]
             mines += 1
-    for m in range(cote):
-        print(texte[m*cote:] + "\n" + texte[:m*cote])
 
-    #texte = "0"*cote+texte+"0"*cote
-    #mapd.write(texte)
-    #mapd.close()
 
-def check(i, j):
+def check(ligne, colonne):
     global mineautour, texte, casestestees
     texte2 = texte
     """
@@ -68,23 +65,25 @@ def check(i, j):
         texte2 = texte2[:cote*l] + "00" + texte2[cote*l+1:]
     texte2 = "0"+texte2+"0"
     """
-    if texte2[i+cote*j] == "1":
+    if texte[ligne+cote*colonne] == "1":
         print("perdu")
-        #showerror("Perdu", "Vous êtes tombé sur une mine, vous aurez peut-être plus de chance la prochaine fois")
+        showerror("Perdu", "Vous êtes tombé sur une mine, vous aurez peut-être plus de chance la prochaine fois")
+        Button(Fenetre, text = "  X  ").grid(row = ligne, column = colonne)
     else:
-        for k in range(2):
-            i -= 1
-            j -= 1
-            if texte2[i+k+cote*j] == "1":
+        for k in range(2): #Pour les 8 cases autour
+            ligne -= 1 #Pour commencer à la case à gauche et faire les 2 à droite
+            colonne -= 1 #Pour commencer à la case au dessus et faire les 2 en dessous
+            if ligne+k >= 0 and ligne+k+cote*colonne < len(texte) and texte[ligne+k+cote*colonne] == "1": #Test mine sur la même ligne   Test que si emplacement testé existe
                 mineautour += 1
-            elif texte2[i+cote*(j+k)] == "1":
+            elif colonne+k >= 0 and ligne+cote*(colonne+k) < len(texte) and texte[ligne+cote*(colonne+k)] == "1": #Test mines sur la même colonne   Test que si emplacement testé existe
                 mineautour += 1
-            i += 1
-            j += 1
+            ligne += 1
+            colonne += 1
         casestestees += 1
 
-        Button(Fenetre, text = "  "+ str(mineautour) +"  ").grid(row = i, column = j)
+        Button(Fenetre, text = "  "+ str(mineautour) +"  ").grid(row = ligne, column = colonne)
 
+        mineautour = 0 #Reset du nombre de mines pour les autres boutons
         if casestestees + mines == cote^2:
             showinfo("Gagné !", "Vous avez trouvé toutes les mines")
 
