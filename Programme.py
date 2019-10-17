@@ -36,7 +36,7 @@ class boutons:
         #self.couleur = couleur
 
     def creation(self):
-        Button(Fenetre, text = "     ", command = lambda:check(self.ligne, self.colonne), relief = RAISED).grid(row = self.ligne, column = self.colonne)
+        Button(Fenetre, text = "     ", command = lambda:check(self.ligne, self.colonne), relief = RAISED, borderwidth = 10).grid(row = self.ligne, column = self.colonne)
         #if texte[ligne+cote*colonne] == "1":
         #    bombe = True
 
@@ -44,15 +44,6 @@ class boutons:
 
 
 #Génération Mines
-"""def generation():
-    global texte, mines
-    for i in range(cote):
-        map.append([])
-        maptest.append([])
-        for j in range(cote):
-            map[i].append(0)
-            maptest[i].append(0)"""
-
 
 def generation():
     global texte, mines
@@ -63,7 +54,7 @@ def generation():
             map[i].append(0)
             maptest[i].append(0)
 
-    #ajout d'un double contour, 1 plein et 1 vide pour éviter erreur "out of range" lors de comparaison pour mines autour
+    #ajout d'un double contour, 1 plein et 1 vide pas affichés dans la fenetre (juste dans la liste) pour éviter erreur "out of range" lors de comparaison pour mines autour
     for i in range(cote+4):
         map[0][i] = 1
         map[cote+3][i] = 1
@@ -81,7 +72,7 @@ def generation():
 
 def check(ligne, colonne):
     global mineautour, texte, casestestees
-    print("check    ",ligne, "    ", colonne)
+    print("check    ligne = ",ligne-2, "     colonne = ", colonne-2)
     #Mémorisation des cases testées
     maptest[ligne][colonne] = 1
 
@@ -137,7 +128,12 @@ def check(ligne, colonne):
         if ligne >= cote+1 or colonne >= cote+1 or ligne < 2 or colonne < 2: #Pour pas sortir de la map
             pass
         else:
-            Label(Fenetre, text = "  "+ str(mineautour) +"  ", fg = couleur, relief = FLAT).grid(row = ligne, column = colonne) #Afficahge du nombre de mine autour
+            if mineautour == 0:
+                Label(Fenetre, text = "     ", fg = couleur, relief = FLAT, borderwidth = 10).grid(row = ligne, column = colonne)
+                print("aaaaaaaaaaaaaa")
+            else:
+                Label(Fenetre, text = "  "+ str(mineautour) +"  ", fg = couleur, relief = FLAT, borderwidth = 10).grid(row = ligne, column = colonne) #Afficahge du nombre de mine autour
+                print("aaaaa")
             casestestees += 1
         mineautour = 0 #Reset du nombre de mines pour les autrse boutons
         if casestestees + mines == (cote+2)^2:
