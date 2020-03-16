@@ -1,189 +1,433 @@
 #!/usr/bin/env python3
 # -- coding: utf-8 --
 
-#test12
+
 
 # Importation des modules
 from tkinter import *
 from tkinter.messagebox import *
 from random import *
+import time
+from tkinter.filedialog import *
+import tkinter.colorchooser
+from copy import deepcopy
+import os
+
+
+#Chemin relatif pour les fichiers
+
+fullpath = os.path.abspath(__file__)
+os.chdir(os.path.dirname(fullpath))
 
 
 #Variables
-cote = 20
-minesmax = 25
-minestrouvees = 0
-mines = 0
-mineautour = 0
-casestestees = 0
-map = []
-#Map des cases testé pour pas faire une boucle
-maptest = []
+taille = 25
+pourcentageVivant = 50
+etatCell = []                   #map avec état cell à l'étape n
+etatCell2 = []                  #map avec état cell à l'étape n+1
+pause = 0.01                    #Temps de pause entre chaue étape (en s)
+random = False                  #map random ou via fichier
+choixCouleur = False            #choixCouleur ou couleur de base
+couleurVivant = "chartreuse"
+stop = False                    #Pour le bouton start/stop
+vide = False                    #Pour créer une map vide
+importation = False             #Importation d'une map
+
+
 
 #Fenetre Principale
 Fenetre = Tk()
-Fenetre.title("Démineur by Marius")
+Fenetre.title("Jeu de la Vie by Marius")
 
 
 
-#Classe pour les boutons
+#Options
 
-class boutons:
-
-    def __init__(self, ligne, colonne):
-        self.ligne = ligne
-        self.colonne = colonne
-        #self.couleur = couleur
-
-    def creation(self):
-        Button(Fenetre, text = "     ", command = lambda:check(self.ligne, self.colonne), relief = RAISED, borderwidth = 10).grid(row = self.ligne, column = self.colonne)
-        #if texte[ligne+cote*colonne] == "1":
-        #    bombe = True
+if choixCouleur == True:
+    couleurVivant = (tkinter.colorchooser.askcolor(color=None))[1]
 
 
 
+#Commandes boutons
 
-#Génération Mines
+
+def choixMap():
+    global contenuFichier, taille, importation
+
+    importation = True
+
+    filepath = askopenfilename(title = "Ouvrir une map",filetypes = [("txt files", ".txt")])
+    print(filepath)
+    fichier = open(filepath, "r")      #Importation du fichier map.txt
+    contenuFichier = fichier.read()
+    fichier.close()
+
+    taille = int(contenuFichier.split("\n")[0])     #Taille de la map sur la 1ère ligne
+    print(taille)
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+def choixMoulin():
+    global contenuFichier, taille, importation
+
+    importation = True
+
+    fichier = open("map moulin.txt", "r")
+    contenuFichier = fichier.read()
+    fichier.close()
+
+    taille = int(contenuFichier.split("\n")[0])     #Taille de la map sur la 1ère ligne
+    print(taille)
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+def choixRandom():
+    global contenuFichier, taille, random
+
+    random = True
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+def choixStatique():
+    global contenuFichier, taille, importation
+
+    importation = True
+
+    fichier = open("map statique.txt", "r")
+    contenuFichier = fichier.read()
+    fichier.close()
+
+    taille = int(contenuFichier.split("\n")[0])     #Taille de la map sur la 1ère ligne
+    print(taille)
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+def choixClignotant():
+    global contenuFichier, taille, importation
+
+    importation = True
+
+    fichier = open("map clignotant.txt", "r")
+    contenuFichier = fichier.read()
+    fichier.close()
+
+    taille = int(contenuFichier.split("\n")[0])     #Taille de la map sur la 1ère ligne
+    print(taille)
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+def choixVaisseau():
+    global contenuFichier, taille, importation
+
+    importation = True
+
+    fichier = open("map vaisseau.txt", "r")
+    contenuFichier = fichier.read()
+    fichier.close()
+
+    taille = int(contenuFichier.split("\n")[0])     #Taille de la map sur la 1ère ligne
+    print(taille)
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+
+
+def start():
+    global stop
+
+    stop = False
+
+    boutonStart.config(text = "Stop", fg = "red", command = stopBoucle)
+
+    if antistart == 0:          #Lance la boucle la première fois
+        bouclePrincipale()      #Les autres fois, change juste stop à False et aspect du bouton
+
+
+def stopBoucle():
+    global stop
+
+    stop = True
+
+    boutonStart.config(text = "Start", fg = "chartreuse", command = start)
+
+
+def save():
+    fichierEcriture = asksaveasfile(title = "Enregistrer la configuration actuelle", filetypes = [("txt files", ".txt")])
+    texteEcriture = str(taille) + "\n"
+
+    for x in range(taille):
+        for y in range(taille):
+            if etatCell[y][x] == True:
+                texteEcriture += "1"
+            elif etatCell[y][x] == False:
+                texteEcriture += "0"
+        texteEcriture += "\n"
+
+    fichierEcriture.write(texteEcriture)
+    fichierEcriture.close()
+
+
+def creerGrille():
+    global taille, vide
+
+    vide = True
+    taille = int(spinboxTaille.get())
+
+    generation()
+    initialisationFenetre()
+
+    frame.grid(columnspan = taille)
+
+
+#Génération
 
 def generation():
-    global texte, mines
-    for i in range(cote+4):
-        map.append([])
-        maptest.append([])
-        for j in range(cote+4):
-            map[i].append(0)
-            maptest[i].append(0)
+    global pourcentageVivant, genere
 
-    #ajout d'un double contour, 1 plein et 1 vide pas affichés dans la fenetre (juste dans la liste) pour éviter erreur "out of range" lors de comparaison pour mines autour
-    for i in range(cote+4):
-        map[0][i] = 1
-        map[cote+3][i] = 1
-        map[i][0] = 1
-        map[i][cote+3] = 1
+    genere = True
 
+    Fenetre.columnconfigure(0, weight = 1)
+    Fenetre.rowconfigure(0, weight = 1)
 
-    while mines < minesmax: #Tant qu'il n'y a pas assez de mines
-        aleatoire = randint(0, cote-1) #Emplacement aléatoire
-        aleatoire2 = randint(0, cote-1)
-        if map[aleatoire+2][aleatoire2+2] == 0: #Met une mine si y'en a pas déjà une
-            map[aleatoire+2][aleatoire2+2] = 1
-            mines += 1
+    for y in range(taille):
+        etatCell.append([])     #Tableaux
+        etatCell2.append([])
 
+        Fenetre.columnconfigure(y + 1, weight = 1)  #Pour éviter la déformation
+        Fenetre.rowconfigure(y + 1, weight = 1)     #en étirant la fenetre
 
-def check(ligne, colonne):
-    global mineautour, texte, casestestees
-    print("check    ligne = ",ligne-2, "     colonne = ", colonne-2)
-    #Mémorisation des cases testées
-    maptest[ligne][colonne] = 1
+        for x in range(taille):
+            etatCell[y].append([])  #Double tableaux
+            etatCell2[y].append([])
 
-    #test si bombe
-    if map[ligne][colonne] == 1:
-        print("perdu")
-        showerror("Perdu", "Vous êtes tombé sur une mine, vous aurez peut-être plus de chance la prochaine fois") #Perdu
-        Label(Fenetre, text = "  X  ", fg = "red").grid(row = ligne, column = colonne) #affichage X sur la bombe
-    #si pas bombe
-    else:
-        for x in range(-1,2):
-            for y in range(-1,2): #Test bombe 3x3 autour
-                if ligne+x >= cote+1 or colonne+y >= cote+1 or ligne+x < 2 or colonne+y < 2: #Pour pas dépasser de la map
-                    pass
+            if random == True:
 
-                elif map[ligne+x][colonne+y] == 1: #Ajout de 1 a mineautour si bombe autour
-                    mineautour += 1
+                if randint(0, 100) < pourcentageVivant:     #Remplissage aléatoire
+                    etatCell[y][x] = True                   #de la map en fonction
+                else:                                       #du pourcentage choisi
+                    etatCell[y][x] = False
+
+            if vide == True:
+                etatCell[y][x] = False
 
 
-        #Check autour si 0 mines autour
-        if mineautour == 0:
-            for x in range(-1,2):
-                for y in range (-1,2):
-                    #print(str(ligne+x) + "     " + str(colonne+y))
-                    if ligne+x >= cote+1 or colonne+y >= cote+1 or ligne+x < 2 or colonne+y < 2: #Pour pas dépasser de la map
-                        pass
+    if importation == True:
+        mapFichier = contenuFichier.split("\n")     #Tableau de la map
+                                                    #1 ligne sur le txt
+        for x in range(taille):                     #-> 1 case du tableau
+            for y in range(taille):
 
-                    elif maptest[ligne+x][colonne+y] == 0: #Check encore si toujours 0 mines autour et case pas déjà testée
-                        check(ligne+x,colonne+y)
+                if mapFichier[y + 1][x] == "0":       #0 sur txt = morte
+                    etatCell[y][x] = False
 
+                elif mapFichier[y + 1][x] == "1":     #1 sur txt = vivante
+                    etatCell[y][x] = True
 
-        #Couleur en fonction du nombre de mines
-        if mineautour == 0:
-            couleur = "grey" #gris
-        elif mineautour == 1:
-            couleur = "#0039ff" #bleu
-        elif mineautour == 2:
-            couleur = "#017f04" #vert
-        elif mineautour == 3:
-            couleur = "#ff1b00" #rouge
-        elif mineautour == 4:
-            couleur = "#001882" #bleu foncé
-        elif mineautour == 5:
-            couleur = "#810802" #rouge foncé
-        elif mineautour == 6:
-            couleur = "#028081" #cyan
-        elif mineautour == 7:
-            couleur = "#000000" #noir
-        elif mineautour == 8:
-            couleur = "#818080" #gris
+#Barre de menus
+
+menubar = Menu(Fenetre)
+Fenetre.config(menu = menubar)
+
+menuMap = Menu(menubar, tearoff = 0)                            #menu des map préconfig
+menubar.add_cascade(label = "Configuration", menu = menuMap)
+
+menuMap.add_command(label = "Random", command = choixRandom)
+menuMap.add_command(label = "Moulin", command = choixMoulin)
+menuMap.add_command(label = "Clignotant", command = choixClignotant)
+menuMap.add_command(label = "Statique", command = choixStatique)
+menuMap.add_command(label = "Vaisseau", command = choixVaisseau)
+menuMap.add_separator()
+menuMap.add_command(label = "Importer map", command = choixMap)
 
 
-        if ligne >= cote+1 or colonne >= cote+1 or ligne < 2 or colonne < 2: #Pour pas sortir de la map
-            pass
-        else:
-            if mineautour == 0:
-                Label(Fenetre, text = "     ", fg = couleur, relief = FLAT, borderwidth = 10).grid(row = ligne, column = colonne)
-                print("aaaaaaaaaaaaaa")
+
+
+#Fenetre
+
+def initialisationFenetre():
+
+    for x in range(taille):
+        for y in range(taille):
+            if etatCell[y][x] == True:          #Si cell vivante
+                Label(Fenetre,                  #case verte (ou couleur choisie)
+                    text = "   ",
+                    relief = GROOVE,
+                    borderwidth = 1,
+                    bg = couleurVivant).grid(
+                    row = y + 1, column = x, sticky = "news")
+
+            elif etatCell[y][x] == False:       #Si cell morte
+                Label(Fenetre,                  #case grise
+                    text = "   ",
+                    relief = GROOVE,
+                    borderwidth = 1,
+                    bg = "light grey").grid(
+                    row = y + 1, column = x, sticky = "news")
+
             else:
-                Label(Fenetre, text = "  "+ str(mineautour) +"  ", fg = couleur, relief = FLAT, borderwidth = 10).grid(row = ligne, column = colonne) #Afficahge du nombre de mine autour
-                print("aaaaa")
-            casestestees += 1
-        mineautour = 0 #Reset du nombre de mines pour les autrse boutons
-        if casestestees + mines == (cote+2)^2:
-            showinfo("Gagné !", "Bien joué, vous avez trouvé toutes les mines")
+                print("Erreur Cell ni vivante ni morte")    #Erreur, pas censé arriver
 
 
-def remplissage():
-    for i in range(cote):
-        for j in range(cote):
-            bouton = boutons(i, j)
-            bouton.ligne = i+2
-            bouton.colonne = j+2
-            #bouton.couleur = "grey"
-            bouton.creation()
+def compteur(x, y):
+
+    cellVivantesAutour = 0
+
+    for yadd in range(-1, 2):       #Ligne au dessus, même ligne et ligne en dessous
+        for xadd in range(-1, 2):   #Pareil pour colonnes
+
+            yfinal = y + yadd
+            xfinal = x + xadd
+
+            if yfinal >= taille and xfinal >= taille:       #Si dépasse de la map x & y, reviens de l'autre côté
+                if etatCell[yfinal - taille][xfinal - taille] == True:
+                    cellVivantesAutour += 1
+
+            elif yfinal >= taille:                          #Si dépasse de la map en y, reviens de l'autre côté
+                if etatCell[yfinal - taille][xfinal] == True:
+                    cellVivantesAutour += 1
+
+            elif xfinal >= taille:                          #Si dépasse de la map en x, reviens de l'autre côté
+                if etatCell[yfinal][xfinal - taille] == True:
+                    cellVivantesAutour += 1
+
+            elif yadd != 0 or xadd != 0:                    #On compte les cases autour mais pas la case elle même
+                if etatCell[yfinal][xfinal] == True:
+                    cellVivantesAutour += 1
+
+            elif yadd == 0 and xadd == 0:
+                pass
+
+    return cellVivantesAutour
+
+
+def etapeSuivante():
+    global etatCell, etatCell2
+
+
+    for x in range(taille):
+        for y in range(taille):
+
+            cellVivantesAutour = compteur(x, y)
+
+            if cellVivantesAutour == 3:
+                etatCell2[y][x] = True
+
+            elif cellVivantesAutour == 2 and etatCell[y][x] == True:
+                etatCell2[y][x] = True
+
+            else:
+                etatCell2[y][x] = False
+
+    etatCell = deepcopy(etatCell2)
+
+
+
+def actualisationFenetre():
+
+    for x in range(taille):
+        for y in range(taille):
+            if etatCell[y][x] == True:
+                Fenetre.grid_slaves(row = y + 1, column = x)[0].configure(bg = couleurVivant)
+
+            else:
+                Fenetre.grid_slaves(row = y + 1, column = x)[0].configure(bg = "light grey")
+
+
+
+
+def changement():
+
+    etapeSuivante()
+    actualisationFenetre()
+
+
+
+antistart = 0
+
+def bouclePrincipale():
+    global antistart, pause, stop
+
+    if antistart == 1 and stop == False:
+        changement()
+
+    antistart = 1
+
+    Fenetre.after(int(pause * 1000), bouclePrincipale)
+
+
+#Clique gauche pour modification de la map
+
 
 def action(event):
-    #print("\n", event.type)
-    #print(event.num)
-    #print(event.widget)
 
-    if event.type != "" and event.num == 3:
-        #print("clique droit")
-        #setattr(event.widget, text, " m ")
-        #print(event.widget._gridconvvalue())
-        #print(event.widget.winfo_x())
-        #print(event.widget.winfo_y())
-            #a, gpsbouton = event.widget.grid
-        print(event.widget.winfo_x())
-        print(event.widget.winfo_y())
-        x , y  = (Tk().grid_location(event.widget.winfo_x(),event.widget.winfo_y()))
-        Button(Fenetre, text = " M ", bg = "red").grid(row = y+1, column = x+1)
+    if event.type != "" and event.num == 1:
 
+        position = event.widget.grid_info()
 
-#B1 events:
-#Fenetre.bind("<Button-1>", action)
-#Fenetre.bind("<B1-Motion>", action)
-#Fenetre.bind("<ButtonRelease-1>", action)
+        if event.widget["bg"] == "light grey" and event.widget["text"] == "   ":
+            event.widget["bg"] = couleurVivant
+            etatCell[position["row"] - 1][position["column"]] = True
 
-#B3 events :
-Fenetre.bind("<Button-3>", action)
-Fenetre.bind("<B3-Motion>", action)
-Fenetre.bind("<ButtonRelease-3>", action)
+        elif event.widget["bg"] == couleurVivant and event.widget["text"] == "   ":
+            event.widget["bg"] = "light grey"
+            etatCell[position["row"] - 1][position["column"]] = False
 
 
 
+#Clique gauche event
+Fenetre.bind("<ButtonPress-1>", action)
 
-#Lancement programme
 
-generation()
-remplissage()
-for i in range(cote+4):
-    print(map[i])
+#Commandes
+
+frame = LabelFrame(Fenetre, text = "Commandes")
+frame.grid(row = 0, column = 0)
+
+
+boutonStart = Button(frame, text = "Start", fg = "chartreuse", command = start, borderwidth = 10)
+boutonStart.grid(row = 0, column = 0)
+
+boutonSave = Button(frame, text = "Save", command = save, borderwidth = 10)
+boutonSave.grid(row = 0, column = 1)
+
+labelTaille = Label(frame, text = " Taille =")
+labelTaille.grid(row = 0, column = 2)
+
+spinboxTaille = Spinbox(frame, from_ = 1, to = 50)
+spinboxTaille.grid(row = 0, column = 3)
+
+boutonGrille = Button(frame, text = "Créer une grille vide", command = creerGrille)
+boutonGrille.grid(row = 0, column = 4)
+
+
+#Lancement
+
 Fenetre.mainloop()
+
+print("FIN")
+
+#
